@@ -1,15 +1,40 @@
-const { app, BrowserWindow, session, ipcMain, net, Tray, Menu, dialog } = require('electron');
+const { app, BrowserWindow, session, ipcMain, net, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { ElectronBlocker } = require('@cliqz/adblocker-electron');
 const fetch = require('cross-fetch');
 
-let store;
+// Utility function to get correct asset paths in both dev and production
+function getAssetPath(...paths) {
+  const basePath = app.isPackaged 
+    ? path.join(process.resourcesPath, 'assets')
+    : path.join(__dirname, 'assets');
+  
+  return path.join(basePath, ...paths);
+}
 
-(async () => {
+// Global state
+const state = {
+  windows: {
+    main: null,
+    splash: null,
+    settings: null,
+    mystuff: null,
+    donate: null,
+    developers: null,
+    audio: null
+  },
+  tray: null,
+  isOnline: false,
+  lastNetworkCheck: 0,
+  networkPopupTimeout: null,
+  blocker: null,
+  store: null
+};
+
+async function initializeStore() {
   const Store = (await import('electron-store')).default;
-
-  store = new Store({
+  state.store = new Store({
     defaults: {
       theme: 'system',
       downloadsPath: path.join(app.getPath('downloads'), 'TheCub4'),
@@ -20,76 +45,59 @@ let store;
     }
   });
 
-  const downloadsPath = store.get('downloadsPath');
-  fs.mkdirSync(downloadsPath, { recursive: true });
+  const downloadsPath = state.store.get('downloadsPath');
+  if (!fs.existsSync(downloadsPath)) {
+    fs.mkdirSync(downloadsPath, { recursive: true });
+  }
+}
 
-  let mainWindow;
-  let splashWindow;
-  let settingsWindow;
-  let mystuffWindow;
-  let tray;
-  let isOnline = false;
-  let lastNetworkCheck = 0;
-  let networkPopupTimeout;
-  
-  
-  // ✅ Enable ad blocking
-  const blocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch);
-  blocker.enableBlockingInSession(session.defaultSession);
-  console.log("🔒 Ad blocker is active");
+async function initializeAdBlocker() {
+  try {
+    state.blocker = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch);
+    state.blocker.enableBlockingInSession(session.defaultSession);
+    console.log("🔒 Ad blocker is active");
 
-ElectronBlocker.fromPrebuiltFull(fetch).then(blocker => {
-  blocker.enableBlockingInSession(session.defaultSession);
+    state.blocker = await ElectronBlocker.fromPrebuiltFull(fetch);
+    state.blocker.enableBlockingInSession(session.defaultSession);
+    console.log('🛡️ Full uBlock-style blocker is active.');
+  } catch (error) {
+    console.error('Failed to initialize ad blocker:', error);
+  }
+}
 
-  blocker.on('request-blocked', (request) => {
-    console.log('⛔ Blocked:', request.url);
-  });
+function updateNetworkIndicator() {
+  if (state.tray && !state.tray.isDestroyed()) {
+    const iconName = state.isOnline ? 'online' : 'offline';
+    state.tray.setImage(getAssetPath('icons', `${iconName}.png`));
+  }
+}
 
-  blocker.on('request-whitelisted', (request) => {
-    console.log('⚪ Whitelisted:', request.url);
-  });
+function checkNetworkStatus() {
+  const now = Date.now();
+  if (now - state.lastNetworkCheck < 5000) return state.isOnline;
 
-  blocker.on('request-redirected', (request) => {
-    console.log('➡️ Redirected:', request.url);
-  });
-
-  console.log('🛡️ Full uBlock-style blocker is active.');
-});
-
-  function updateNetworkIndicator() {
-    if (tray) {
-      const iconName = isOnline ? 'online' : 'offline';
-      tray.setImage(path.join(__dirname, `assets/icons/${iconName}.png`));
+  state.lastNetworkCheck = now;
+  const online = net.isOnline();
+  if (online !== state.isOnline) {
+    state.isOnline = online;
+    updateNetworkIndicator();
+    
+    if (state.windows.main && !state.windows.main.isDestroyed()) {
+      state.windows.main.webContents.send('network-status', state.isOnline);
+      state.windows.main.webContents.send('show-network-popup', state.isOnline);
+      clearTimeout(state.networkPopupTimeout);
+      state.networkPopupTimeout = setTimeout(() => {
+        if (state.windows.main && !state.windows.main.isDestroyed()) {
+          state.windows.main.webContents.send('hide-network-popup');
+        }
+      }, 10000);
     }
   }
-
-  function checkNetworkStatus() {
-    const now = Date.now();
-    if (now - lastNetworkCheck < 5000) return isOnline;
-
-    lastNetworkCheck = now;
-    const online = net.isOnline();
-    if (online !== isOnline) {
-      isOnline = online;
-      updateNetworkIndicator();
-      if (mainWindow) {
-        mainWindow.webContents.send('network-status', isOnline);
-        mainWindow.webContents.send('show-network-popup', isOnline);
-        clearTimeout(networkPopupTimeout);
-        networkPopupTimeout = setTimeout(() => {
-          mainWindow.webContents.send('hide-network-popup');
-        }, 10000);
-      }
-    }
-    return isOnline;
-  }
-  
-
-  // Splash screen
-let audioWindow; // define globally at top alongside splashWindow, mainWindow, etc.
+  return state.isOnline;
+}
 
 function createSplashScreen() {
-  splashWindow = new BrowserWindow({
+  state.windows.splash = new BrowserWindow({
     width: 600,
     height: 400,
     frame: false,
@@ -102,11 +110,10 @@ function createSplashScreen() {
     }
   });
 
-  splashWindow.loadFile(path.join(__dirname, 'assets/splash.html'));
+  state.windows.splash.loadFile(getAssetPath('splash.html'));
 
-  // Play audio in hidden window once splash is ready
-  splashWindow.webContents.once('did-finish-load', () => {
-    audioWindow = new BrowserWindow({
+  state.windows.splash.webContents.once('did-finish-load', () => {
+    state.windows.audio = new BrowserWindow({
       show: false,
       webPreferences: {
         contextIsolation: true,
@@ -114,194 +121,216 @@ function createSplashScreen() {
       }
     });
 
-    audioWindow.loadURL(`data:text/html,
+    state.windows.audio.loadURL(`data:text/html,
       <html>
         <body style="margin:0;background:black;">
           <audio autoplay loop>
-            <source src="file://${__dirname}/assets/splash.mp3" type="audio/mp3" />
+            <source src="${getAssetPath('intro.mp3')}" type="audio/mp3" />
           </audio>
         </body>
       </html>
     `);
   });
-  
- // hehe .. am a genius.. day 4 without sleeping finally blocked all ads
-  // After 4 seconds close splash and open main window (audioWindow stays)
+
   setTimeout(() => {
-    if (splashWindow) splashWindow.close();
-    splashWindow = null;
+    if (state.windows.splash && !state.windows.splash.isDestroyed()) {
+      state.windows.splash.close();
+    }
     createMainWindow();
   }, 4000);
 }
 
+function createMainWindow() {
+  if (state.windows.main && !state.windows.main.isDestroyed()) {
+    state.windows.main.focus();
+    return;
+  }
 
-  function createMainWindow() {
-    mainWindow = new BrowserWindow({
-      width: 1024,
-      height: 700,
-      icon: path.join(__dirname, 'assets', 'logo.png'),
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
-        contextIsolation: true,
-        nodeIntegration: false,
-        partition: 'persist:myAppSession'
-      }
-    });
+  state.windows.main = new BrowserWindow({
+    width: 1024,
+    height: 700,
+    icon: getAssetPath('logo.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      partition: 'persist:myAppSession'
+    }
+  });
 
- // Block popups, new windows, etc:
-  mainWindow.webContents.setWindowOpenHandler(() => {
-    console.log('Popup blocked');
+  state.windows.main.webContents.setWindowOpenHandler(() => {
     return { action: 'deny' };
   });
 
-  mainWindow.loadURL('https://thecub4.vercel.app');
-    mainWindow.webContents.setZoomFactor(0.8);
+  state.windows.main.loadURL('https://thecub4.vercel.app');
+  state.windows.main.webContents.setZoomFactor(0.8);
 
-    mainWindow.on('closed', () => {
-      mainWindow = null;
-    });
-
-    setAppMenu();
-  }
-
-  function createSettingsWindow() {
-    if (settingsWindow) {
-      settingsWindow.focus();
-      return;
-    }
-    settingsWindow = new BrowserWindow({
-      width: 500,
-      height: 400,
-      resizable: false,
-      title: 'Settings',
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false
+  state.windows.main.on('close', () => {
+    // Close all other windows when main window closes
+    Object.values(state.windows).forEach(win => {
+      if (win && !win.isDestroyed() && win !== state.windows.main) {
+        win.close();
       }
     });
+  });
 
-    settingsWindow.loadFile(path.join(__dirname, 'assets/settings.html'));
+  state.windows.main.on('closed', () => {
+    state.windows.main = null;
+  });
 
-    settingsWindow.on('closed', () => {
-      settingsWindow = null;
-    });
+  setupApplicationMenu();
+}
+
+function createSettingsWindow() {
+  if (state.windows.settings && !state.windows.settings.isDestroyed()) {
+    state.windows.settings.focus();
+    return;
   }
-  
+
+  state.windows.settings = new BrowserWindow({
+    width: 500,
+    height: 400,
+    resizable: false,
+    title: 'Settings',
+    icon: getAssetPath('logo.png'),
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  state.windows.settings.loadFile(getAssetPath('settings.html'))
+    .catch(err => console.error('Failed to load settings window:', err));
+
+  state.windows.settings.on('closed', () => {
+    state.windows.settings = null;
+  });
+}
+
 function createDonateWindow() {
-  const donateWindow = new BrowserWindow({
+  if (state.windows.donate && !state.windows.donate.isDestroyed()) {
+    state.windows.donate.focus();
+    return;
+  }
+
+  state.windows.donate = new BrowserWindow({
     width: 500,
     height: 400,
     title: 'Donate to The Cube',
     resizable: false,
+    icon: getAssetPath('logo.png'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false
     }
   });
 
-  donateWindow.loadFile(path.join(__dirname, 'assets/donate.html'));
+  state.windows.donate.loadFile(getAssetPath('donate.html'))
+    .catch(err => console.error('Failed to load donate window:', err));
 
-  donateWindow.on('closed', () => {
-    donateWindow = null;
+  state.windows.donate.on('closed', () => {
+    state.windows.donate = null;
   });
 }
 
 function createDevelopersWindow() {
-  const devWindow = new BrowserWindow({
+  if (state.windows.developers && !state.windows.developers.isDestroyed()) {
+    state.windows.developers.focus();
+    return;
+  }
+
+  state.windows.developers = new BrowserWindow({
     width: 600,
     height: 450,
     title: 'Developers',
     resizable: false,
+    icon: getAssetPath('logo.png'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false
     }
   });
 
-  devWindow.loadFile(path.join(__dirname, 'assets/developers.html'));
+  state.windows.developers.loadFile(getAssetPath('developers.html'))
+    .catch(err => console.error('Failed to load developers window:', err));
 
-  devWindow.on('closed', () => {
-    devWindow = null;
+  state.windows.developers.on('closed', () => {
+    state.windows.developers = null;
   });
 }
 
-  function createMystuffWindow() {
-    if (mystuffWindow) {
-      mystuffWindow.focus();
-      return;
-    }
-    mystuffWindow = new BrowserWindow({
-      width: 600,
-      height: 500,
-      title: 'My Stuff',
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false
-      }
-    });
-
-    mystuffWindow.loadFile(path.join(__dirname, 'assets/downloads.html'));
-
-    mystuffWindow.on('closed', () => {
-      mystuffWindow = null;
-    });
+function createMystuffWindow() {
+  if (state.windows.mystuff && !state.windows.mystuff.isDestroyed()) {
+    state.windows.mystuff.focus();
+    return;
   }
 
-function setAppMenu() {
+  state.windows.mystuff = new BrowserWindow({
+    width: 600,
+    height: 500,
+    title: 'My Stuff',
+    icon: getAssetPath('logo.png'),
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  state.windows.mystuff.loadFile(getAssetPath('downloads.html'))
+    .catch(err => console.error('Failed to load mystuff window:', err));
+
+  state.windows.mystuff.on('closed', () => {
+    state.windows.mystuff = null;
+  });
+}
+
+function setupApplicationMenu() {
   const template = [
     {
       label: 'File',
       submenu: [
-        { label: 'Settings', click: () => createSettingsWindow() },
+        { label: 'Settings', click: createSettingsWindow },
         { type: 'separator' },
         { label: 'Exit', role: 'quit' }
       ]
     },
-        {
+    {
       label: 'Home',
       click: () => {
-        if (mainWindow) {
-          mainWindow.loadURL('https://thecub4.vercel.app/browse');
+        if (state.windows.main && !state.windows.main.isDestroyed()) {
+          state.windows.main.loadURL('https://thecub4.vercel.app/browse');
         }
       }
     },
     {
       label: 'Refresh',
       click: () => {
-        if (mainWindow) mainWindow.reload();
+        if (state.windows.main && !state.windows.main.isDestroyed()) {
+          state.windows.main.reload();
+        }
       }
     },
     {
       label: 'DOWNLOADS',
       click: () => {
-        if (mainWindow) {
-          mainWindow.loadURL('https://thecub4.vercel.app/embedded-download');
+        if (state.windows.main && !state.windows.main.isDestroyed()) {
+          state.windows.main.loadURL('https://thecub4.vercel.app/embedded-download');
         }
       }
     },
     {
       label: 'Music',
       click: () => {
-        if (mainWindow) {
-          mainWindow.loadURL('https://cubic-stream.vercel.app');
+        if (state.windows.main && !state.windows.main.isDestroyed()) {
+          state.windows.main.loadURL('https://cubic-stream.vercel.app');
         }
       }
     },
     {
       label: 'Donate',
       submenu: [
-        {
-          label: '💸 Donate',
-          click: () => {
-            createDonateWindow();
-          }
-        },
-        {
-          label: '👨‍💻 Developers',
-          click: () => {
-            createDevelopersWindow();
-          }
-        }
+        { label: '💸 Donate', click: createDonateWindow },
+        { label: '👨‍💻 Developers', click: createDevelopersWindow }
       ]
     }
   ];
@@ -309,40 +338,69 @@ function setAppMenu() {
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 }
-ipcMain.on('open-settings', () => {
-  createSettingsWindow();
-});
 
-ipcMain.on('open-downloads', () => {
-  createMystuffWindow();
-});
+function setupIPCListeners() {
+  ipcMain.on('open-settings', createSettingsWindow);
+  ipcMain.on('open-downloads', createMystuffWindow);
+  ipcMain.on('open-donate', createDonateWindow);
+  ipcMain.on('open-developers', createDevelopersWindow);
+}
 
-// Add these two new handlers:
-ipcMain.on('open-donate', () => {
-  createDonateWindow();
-});
-
-ipcMain.on('open-developers', () => {
-  createDevelopersWindow();
-});
-
-
-  app.whenReady().then(() => {
-    createSplashScreen();
-    checkNetworkStatus();
-    setInterval(checkNetworkStatus, 5000);
-
-    tray = new Tray(path.join(__dirname, 'assets/icons/offline.png'));
-    tray.setToolTip('TheCub4 Network Status');
-    updateNetworkIndicator();
+// Update your cleanup function
+function cleanup() {
+  // Close all windows
+  Object.values(state.windows).forEach(win => {
+    if (win && !win.isDestroyed()) {
+      win.close();
+    }
   });
 
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
-  });
+  // Destroy tray
+  if (state.tray && !state.tray.isDestroyed()) {
+    state.tray.destroy();
+  }
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
-  });
-})();
+  // Clear timeouts
+  clearTimeout(state.networkPopupTimeout);
+}
 
+async function initializeApp() {
+  try {
+    await initializeStore();
+    await initializeAdBlocker();
+    setupIPCListeners();
+
+    app.whenReady().then(() => {
+      createSplashScreen();
+      checkNetworkStatus();
+      setInterval(checkNetworkStatus, 5000);
+
+      state.tray = new Tray(getAssetPath('icons', 'offline.png'));
+      state.tray.setToolTip('TheCub4 Network Status');
+      updateNetworkIndicator();
+    });
+
+// Update your window-all-closed handler
+app.on('window-all-closed', () => {
+  // Only quit if all windows are closed (including the main window)
+  if (BrowserWindow.getAllWindows().length === 0) {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  }
+});
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createMainWindow();
+      }
+    });
+
+    app.on('before-quit', cleanup);
+  } catch (error) {
+    console.error('App initialization failed:', error);
+    app.quit();
+  }
+}
+
+initializeApp();
