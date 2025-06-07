@@ -1,0 +1,17 @@
+directories:
+  output: dist
+  buildResources: assets
+appId: com.cyberghost.execube
+productName: The-Cube
+files:
+  - filter:
+      - '**/*'
+linux:
+  target:
+    - AppImage
+    - deb
+    - snap
+  category: Utility
+  icon: assets/logo
+  maintainer: Cyberghost <chrislumain@yahoo.com>
+electronVersion: 28.3.3

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Support The Cube</title>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --card: #1b1b1b;
+      --text: #ffffff;
+      --accent: #6d8eff;
+      --accent-hover: #587adc;
+      --gray: #aaa;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 50px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: var(--card);
+      padding: 40px;
+      border-radius: 16px;
+      max-width: 650px;
+      width: 100%;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 1s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-size: 26px;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .date {
+      color: var(--gray);
+      font-size: 13px;
+      margin-bottom: 25px;
+    }
+
+    p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #ccc;
+      margin-bottom: 15px;
+    }
+
+    .button-group {
+      margin-top: 25px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .copy-text {
+      background: #2c2c2c;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      word-break: break-all;
+      display: inline-block;
+      color: var(--gray);
+    }
+
+    .copied {
+      font-size: 13px;
+      color: #6fff6d;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💜 Support The Cube Development</h1>
+    <div class="date">📅 May 16, 2025 at 11:30 AM</div>
+
+    <p>Hey Cube users! 👋 I’m a student dev passionate about making streaming free and accessible to all.</p>
+    <p>Maintaining and improving <strong>The Cube</strong> takes a lot of time and server cost. If you love what we do, consider buying me a coffee ☕ — it helps me stay motivated and keep the servers running! 🚀</p>
+
+    <div class="button-group">
+      <a class="btn" onclick="openExternal()">☕ Buy Me a Coffee</a>
+      <span class="copy-text" id="linkText">https://ko-fi.com/anonghost40418</span>
+      <button class="btn" onclick="copyLink()">📋 Copy</button>
+      <span class="copied" id="copiedMsg" style="display:none;">Copied!</span>
+    </div>
+  </div>
+
+  <script>
+    function copyLink() {
+      const link = document.getElementById('linkText').textContent;
+      navigator.clipboard.writeText(link).then(() => {
+        const msg = document.getElementById('copiedMsg');
+        msg.style.display = 'inline';
+        setTimeout(() => msg.style.display = 'none', 2000);
+      });
+    }
+
+    function openExternal() {
+      // If in Electron preload mode
+      if (window.electronAPI && window.electronAPI.openKofi) {
+        window.electronAPI.openKofi();
+      } else {
+        window.open('https://ko-fi.com/anonghost40418', '_blank');
+      }
+    }
+  </script>
+</body>
+</html>
+

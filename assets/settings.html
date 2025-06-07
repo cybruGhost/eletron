@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Settings – The Cube</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --card: #1a1a1a;
+      --text: #f0f0f0;
+      --accent: #6d8eff;
+      --gray: #999;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Inter", sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 20px;
+      min-height: 100vh;
+    }
+
+    .settings-box {
+      background: var(--card);
+      padding: 40px;
+      max-width: 700px;
+      width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 30px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .description {
+      text-align: center;
+      font-size: 16px;
+      color: var(--gray);
+      margin-bottom: 30px;
+    }
+
+    .section {
+      margin-top: 30px;
+    }
+
+    .section h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #ccc;
+    }
+
+    .section p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #ddd;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 40px;
+    }
+
+    .btn-group a {
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .btn-group a:hover {
+      background: #5475e4;
+      transform: translateY(-2px);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    @media (max-width: 480px) {
+      .settings-box {
+        padding: 25px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-box">
+    <h1>⚙️ The Cube Settings</h1>
+    <p class="description">Customize your experience & get to know the team behind this platform.</p>
+
+    <div class="section">
+      <h2>👤 About The Cube</h2>
+      <p>The Cube is a lightweight, ad-free streaming platform designed for speed, simplicity and a modern user experience. Powered by Electron, with privacy-focused features.</p>
+    </div>
+
+    <div class="section">
+      <h2>👨‍💻 Developers & Contributors</h2>
+      <p><strong>Cyberghost</strong> – Lead Developer & Designer</p>
+      <p><strong>Cess</strong> – Tester & UI Feedback</p>
+      <p><strong>hdobox.com</strong> – Media Hosting Support</p>
+    </div>
+
+    <div class="section">
+      <h2>🔐 Features</h2>
+      <p>✔️ Full Ad-Blocking<br>✔️ Native App Experience<br>✔️ Fast Loading<br>✔️ has music</p>
+    </div>
+
+    <div class="btn-group">
+      <a href="https://github.com/Cybrughost" target="_blank">🌐 GitHub</a>
+      <a href="https://thecub.netlify.app" target="_blank">📲 Download android Apk</a>
+      <a href="https://discord.com/invite/3SZh4YUG84" target="_blank">💬 Join Discord</a>
+    </div>
+
+    <div class="footer">
+      &copy; 2025 The Cube. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+

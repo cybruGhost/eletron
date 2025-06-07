@@ -1,0 +1,46 @@
+{
+  "name": "The-Cube",
+  "version": "1.0.0",
+  "description": "Electron app for thecub4.vercel.app",
+  "homepage": "https://thecub4.vercel.app",
+  "main": "main.js",
+  "author": {
+    "name": "Cyberghost",
+    "email": "chrislumain@yahoo.com"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.6.0"
+  },
+  "dependencies": {
+    "@cliqz/adblocker-electron": "^1.34.0",
+    "cross-fetch": "^4.1.0",
+    "electron-store": "^10.0.1"
+  },
+  "build": {
+    "appId": "com.cyberghost.execube",
+    "productName": "The-Cube",
+    "files": [
+      "**/*"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "snap"
+      ],
+      "category": "Utility",
+      "icon": "assets/logo",
+      "maintainer": "Cyberghost <chrislumain@yahoo.com>"
+    }
+  }
+}
+

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cube Developers</title>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --card: #1a1a1a;
+      --text: #ffffff;
+      --accent: #6d8eff;
+      --gray: #aaa;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 50px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    .container {
+      background: var(--card);
+      max-width: 700px;
+      width: 100%;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    }
+    h1 {
+      text-align: center;
+      color: var(--accent);
+      margin-bottom: 30px;
+    }
+    .dev-card {
+      display: flex;
+      align-items: center;
+      margin-bottom: 30px;
+      background: #141414;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      transition: transform 0.2s ease;
+    }
+    .dev-card:hover {
+      transform: scale(1.02);
+    }
+    .avatar {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      margin-right: 20px;
+      border: 2px solid var(--accent);
+      object-fit: cover;
+    }
+    .dev-info {
+      flex: 1;
+    }
+    .dev-info h2 {
+      font-size: 20px;
+      color: #fff;
+    }
+    .dev-info p {
+      color: var(--gray);
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .dev-info a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 14px;
+      margin-top: 5px;
+      display: inline-block;
+    }
+    .supporters {
+      margin-top: 40px;
+    }
+    .supporters h3 {
+      color: var(--accent);
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .supporters p {
+      color: #ccc;
+      font-size: 14px;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Meet The Team</h1>
+
+    <div class="dev-card">
+      <img class="avatar" src="https://github.com/Cybrughost.png" alt="Cyberghost" />
+      <div class="dev-info">
+        <h2>Cyberghost</h2>
+        <p>Lead Developer & UI Designer</p>
+        <a href="https://github.com/Cybrughost" target="_blank">🔗 github.com/Cybrughost</a>
+      </div>
+    </div>
+
+    <div class="dev-card">
+      <img class="avatar" src="https://github.com/Nobrainghost.png" alt="Nobrainghost" />
+      <div class="dev-info">
+        <h2>Nobrainghost</h2>
+        <p>Security & Infrastructure</p>
+        <a href="https://github.com/Nobrainghost" target="_blank">🔗 github.com/Nobrainghost</a>
+      </div>
+    </div>
+
+    <!-- Added ChatGPT dev card -->
+    <div class="dev-card">
+      <img class="avatar" src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT" />
+      <div class="dev-info">
+        <h2>ChatGPT</h2>
+        <p>AI Assistant & Debugging Helper</p>
+        <a href="https://openai.com/chatgpt" target="_blank">🔗 openai.com/chatgpt</a>
+      </div>
+    </div>
+
+    <div class="supporters">
+      <h3>🎉 Special Thanks To:</h3>
+      <p>💜 Kyle – Testing & Support</p>
+      <p>💜 Cess – Feature Requests & Feedback</p>
+      <p>💜 hdobox.com – Inspiration & Streaming DB Ideas</p>
+    </div>
+  </div>
+</body>
+</html>
+
